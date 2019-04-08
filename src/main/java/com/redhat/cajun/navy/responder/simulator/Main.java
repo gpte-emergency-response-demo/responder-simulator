@@ -56,7 +56,7 @@ public class Main extends AbstractVerticle {
         Future<String> rFuture = Future.future();
         Future<String> cFuture = Future.future();
         Future<String> pFuture = Future.future();
-
+        Future<String> hFuture = Future.future();
 
         DeploymentOptions options = new DeploymentOptions();
 
@@ -64,6 +64,7 @@ public class Main extends AbstractVerticle {
         vertx.deployVerticle(new SimulationControl(), options, rFuture.completer());
         vertx.deployVerticle(new ResponderConsumerVerticle(), options, cFuture.completer());
         vertx.deployVerticle(new ResponderProducerVerticle(), options, cFuture.completer());
+        vertx.deployVerticle(new HttpApplication(), options, hFuture.completer());
 
 
         CompositeFuture.all(rFuture, cFuture, pFuture).setHandler(ar -> {

@@ -5,7 +5,7 @@ spec:
       volumes:
         - configMap:
             # Name of the config map
-            name: mission-service
+            name: responder-simulator
             # Define the items from the config map to mount
             items:
               - key: app-config.properties
@@ -13,7 +13,7 @@ spec:
             # Volume name (used as reference below)
           name: config
       containers:
-        - name: mission-service
+        - name: responder-simulator
           env:
             - name: KUBERNETES_NAMESPACE
               valueFrom:
