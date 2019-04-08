@@ -10,7 +10,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 
-public class MissionMain extends AbstractVerticle {
+public class Main extends AbstractVerticle {
     @Override
     public void start(final Future<Void> future) {
 
@@ -85,7 +85,7 @@ public class MissionMain extends AbstractVerticle {
     public static void main(String[] args) {
         io.vertx.reactivex.core.Vertx vertx = io.vertx.reactivex.core.Vertx.vertx();
 
-        vertx.rxDeployVerticle(MissionMain.class.getName())
+        vertx.rxDeployVerticle(Main.class.getName())
                 .subscribe();
     }
 
