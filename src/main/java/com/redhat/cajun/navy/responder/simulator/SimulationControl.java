@@ -6,7 +6,7 @@ import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import rx.Observable;
+
 
 public class SimulationControl extends ResponderVerticle {
 
@@ -20,23 +20,30 @@ public class SimulationControl extends ResponderVerticle {
         vertx.eventBus().consumer(config().getString(RES_INQUEUE, RES_INQUEUE), this::onMessage);
 
         long timerID = vertx.setPeriodic(defaultTime, id -> {
-                responders.getActiveResponders().forEach(responder -> { createMessage((responder)); });
+                responders.getActiveResponders().forEach(responder -> {
+                    if(responder.isEmpty()) {
+                        responders.removeResponder(responder);
+                    }
+                    else {
+                        createMessage((responder));
+                    }
+
+                });
         });
 
     }
 
-    private void createMessage(Responder responder){
+    protected void createMessage(Responder responder){
         //move the responders location
-        responder.nextLocation();
-        //System.out.println("Responder" + responder.getResponderId()+" is at "+responder.getCurrentLocation().toString());
-
-        if(responder.isEmpty()){
+        if(!responder.isEmpty())
+            responder.nextLocation();
+        else {
             responders.removeResponder(responder);
             System.out.println("Removing responder "+responder);
         }
 
         DeliveryOptions options = new DeliveryOptions().addHeader("action", Action.PUBLISH_UPDATE.getActionType());
-        vertx.eventBus().send(RES_OUTQUEUE, responder.messageString(), options, reply -> {
+        vertx.eventBus().send(RES_OUTQUEUE, responder.toString(), options, reply -> {
             if (reply.succeeded()) {
                 System.out.println("Responder update message accepted");
             } else {
@@ -45,7 +52,7 @@ public class SimulationControl extends ResponderVerticle {
         });
     }
 
-    private Responder getResponderFromStringJson(String json) throws Exception{
+    protected Responder getResponderFromStringJson(String json) throws Exception{
         Responder r = new Responder();
         JsonNode body = getNode("body", json);
         r.setResponderId(body.get("responderId").asText());
@@ -60,10 +67,8 @@ public class SimulationControl extends ResponderVerticle {
         return r;
     }
 
-    private JsonNode getNode(String tag, String stream) throws Exception{
-
+    protected JsonNode getNode(String tag, String stream) throws Exception{
         return Json.mapper.readTree(stream).get(tag);
-
     }
 
     public void onMessage(Message<JsonObject> message) {

@@ -1,5 +1,7 @@
 package com.redhat.cajun.navy.responder.simulator;
 
+import io.vertx.core.json.Json;
+
 import java.util.Objects;
 import java.util.Stack;
 
@@ -17,8 +19,10 @@ public class Responder {
         responderLocation = new Stack<Location>();
     }
 
-    public int getLocationCount(){
+
+    public int getLocationCount() {
         return responderLocation.size();
+
     }
 
     public String getMissionId() {
@@ -37,31 +41,35 @@ public class Responder {
         this.responderId = responderId;
     }
 
-    public Location getCurrentLocation(){
-        return responderLocation.peek();
+    public Location getCurrentLocation() {
+        if (!responderLocation.isEmpty())
+            return responderLocation.peek();
+        else throw new IllegalArgumentException("Stack is empty now..");
+
     }
 
-    public boolean isEmpty(){
+    public boolean isEmpty() {
         return responderLocation.isEmpty();
     }
 
 
-    public Location nextLocation(){
-        responderLocation.pop();
-        return responderLocation.peek();
+    public Location nextLocation() {
+        if (!responderLocation.isEmpty()) {
+            return responderLocation.pop();
+        } else throw new IllegalArgumentException("Stack is Empty");
     }
 
-    public void addNextLocation(Location location){
-        if(responderLocation!=null){
+    public void addNextLocation(Location location) {
+        if (responderLocation != null) {
             responderLocation.push(location);
         }
     }
 
-    public void setLocation(Location location){
+    public void setLocation(Location location) {
         addNextLocation(location);
     }
 
-    public Location getLocation(){
+    public Location getLocation() {
         return nextLocation();
     }
 
@@ -98,11 +106,6 @@ public class Responder {
 
     @Override
     public String toString() {
-        return "Responder{" +
-                "responderId='" + responderId + '\'' +
-                ", missionId='" + missionId + '\'' +
-                ", responderLocation=" + responderLocation +
-                ", isHuman=" + isHuman +
-                '}';
+        return Json.encode(this).toString();
     }
 }
