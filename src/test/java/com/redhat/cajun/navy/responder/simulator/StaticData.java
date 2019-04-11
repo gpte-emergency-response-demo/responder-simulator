@@ -1,41 +1,9 @@
 package com.redhat.cajun.navy.responder.simulator;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import io.vertx.core.json.Json;
-import org.junit.jupiter.api.Test;
+public class StaticData {
 
 
-public class SimulationControlTest {
-
-
-    @Test
-    public void testJsonParsing() throws Exception {
-
-        Responder r = new Responder();
-        JsonNode body = getNode("body", testJson);
-        r.setResponderId(body.get("responderId").asText());
-        r.setMissionId((body.get("id").asText()));
-
-        JsonNode route = getNode("route", body.toString());
-        JsonNode steps = getNode("steps", route.toString());
-
-        steps.elements().forEachRemaining(jsonNode -> {
-            System.out.println(jsonNode.get("loc"));
-            r.addNextLocation(Json.decodeValue(String.valueOf(jsonNode.get("loc")),Location.class));
-        });
-
-    }
-
-
-    private JsonNode getNode(String tag, String stream) throws Exception{
-
-        return Json.mapper.readTree(stream).get(tag);
-
-    }
-
-
-
-    String testJson = "{\n" +
+    public static String testJson = "{\n" +
             "  \"id\": \"b90a23d3-0bee-41b1-96f1-56922f8225f0\",\n" +
             "  \"messageType\": \"MissionUpdatedCommand\",\n" +
             "  \"invokingService\": \"MissionService\",\n" +
@@ -313,5 +281,4 @@ public class SimulationControlTest {
             "    }\n" +
             "  }\n" +
             "}";
-
 }

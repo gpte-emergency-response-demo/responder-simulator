@@ -1,5 +1,6 @@
 package com.redhat.cajun.navy.responder.simulator;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.vertx.core.json.Json;
 
 import java.util.Objects;
@@ -11,18 +12,76 @@ public class Responder {
 
     private String missionId = null;
 
+    private String incidentId = null;
+
+    @JsonIgnore
     private Stack<Location> responderLocation = null;
 
     private boolean isHuman = false;
+
+    private boolean isContinue = true;
+
+    private Status status = Status.RECEIVED;
+
+    protected enum Status {
+        RECEIVED("RECEIVED"),
+        PREP("PREP"),
+        READY("READY"),
+        MOVING("MOVING"),
+        STUCK("STUCK"),
+        PICKEDUP("PICKEDUP"),
+        DROPPED("DROPPED");
+
+        private String actionType;
+
+        Status(String actionType) {
+            this.actionType = actionType;
+        }
+
+        public String getActionType() {
+            return actionType;
+        }
+    }
+
+
 
     public Responder() {
         responderLocation = new Stack<Location>();
     }
 
 
-    public int getLocationCount() {
-        return responderLocation.size();
+    public Status getStatus() {
+        return status;
+    }
 
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+
+
+
+    public boolean isContinue() {
+        return isContinue;
+    }
+
+    public void setContinue(boolean aContinue) {
+        isContinue = aContinue;
+    }
+
+    public String getIncidentId() {
+        return incidentId;
+    }
+
+    public void setIncidentId(String incidentId) {
+        this.incidentId = incidentId;
+    }
+
+    public Stack<Location> getResponderLocation() {
+        return responderLocation;
+    }
+
+    public void setResponderLocation(Stack<Location> responderLocation) {
+        this.responderLocation = responderLocation;
     }
 
     public String getMissionId() {
@@ -41,6 +100,7 @@ public class Responder {
         this.responderId = responderId;
     }
 
+    @JsonIgnore
     public Location getCurrentLocation() {
         if (!responderLocation.isEmpty())
             return responderLocation.peek();

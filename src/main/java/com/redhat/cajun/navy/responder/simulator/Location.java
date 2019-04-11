@@ -10,7 +10,27 @@ public class Location {
         this.lon = lon;
     }
 
+    private boolean isWayPoint = false;
+    private boolean isDestination = false;
+
     public Location() {
+    }
+
+
+    public boolean isWayPoint() {
+        return isWayPoint;
+    }
+
+    public void setWayPoint(boolean wayPoint) {
+        isWayPoint = wayPoint;
+    }
+
+    public boolean isDestination() {
+        return isDestination;
+    }
+
+    public void setDestination(boolean destination) {
+        isDestination = destination;
     }
 
     public double getLat() {

@@ -29,7 +29,6 @@ public class ResponderProducerVerticle extends ResponderMessageVerticle{
         switch (action) {
             case "PUBLISH_UPDATE":
 
-                //System.out.println("Sending updates "+message.body().encode());
                 KafkaProducerRecord<String, String> record =
                         KafkaProducerRecord.create(responderMovedTopic, String.valueOf(message.body()));
 

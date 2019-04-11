@@ -11,7 +11,7 @@ import io.vertx.core.json.JsonObject;
 public class SimulationControl extends ResponderVerticle {
 
     private ActiveResponder responders = new ActiveResponder();
-    private int defaultTime = 1000;
+    private int defaultTime = 2000;
 
 
     @Override
@@ -25,7 +25,8 @@ public class SimulationControl extends ResponderVerticle {
                         responders.removeResponder(responder);
                     }
                     else {
-                        createMessage((responder));
+                        if(responder.isContinue())
+                            createMessage((responder));
                     }
 
                 });
@@ -35,21 +36,32 @@ public class SimulationControl extends ResponderVerticle {
 
     protected void createMessage(Responder responder){
         //move the responders location
-        if(!responder.isEmpty())
-            responder.nextLocation();
-        else {
+
+        if(responder.isEmpty()) {
+            System.out.println("Removing responder " + responder);
             responders.removeResponder(responder);
-            System.out.println("Removing responder "+responder);
+            responder.setContinue(false);
+            responder.setStatus(Responder.Status.DROPPED);
+        }
+        else {
+            responder.nextLocation();
+            if (responder.isHuman() && responder.getCurrentLocation().isWayPoint()) {
+                responder.setContinue(false);
+                responder.setStatus(Responder.Status.PICKEDUP);
+            }
+            else{
+                responder.setStatus(Responder.Status.MOVING);
+            }
         }
 
-        DeliveryOptions options = new DeliveryOptions().addHeader("action", Action.PUBLISH_UPDATE.getActionType());
-        vertx.eventBus().send(RES_OUTQUEUE, responder.toString(), options, reply -> {
-            if (reply.succeeded()) {
-                System.out.println("Responder update message accepted");
-            } else {
-                System.out.println("Responder update message not accepted");
-            }
-        });
+            DeliveryOptions options = new DeliveryOptions().addHeader("action", Action.PUBLISH_UPDATE.getActionType());
+            vertx.eventBus().send(RES_OUTQUEUE, responder.toString(), options, reply -> {
+                if (reply.succeeded()) {
+                    System.out.println("Responder update message accepted");
+                } else {
+                    System.out.println("Responder update message not accepted");
+                }
+            });
     }
 
     protected Responder getResponderFromStringJson(String json) throws Exception{
@@ -57,15 +69,20 @@ public class SimulationControl extends ResponderVerticle {
         JsonNode body = getNode("body", json);
         r.setResponderId(body.get("responderId").asText());
         r.setMissionId((body.get("id").asText()));
+        r.setIncidentId(body.get("incidentId").asText());
 
         JsonNode route = getNode("route", body.toString());
         JsonNode steps = getNode("steps", route.toString());
 
         steps.elements().forEachRemaining(jsonNode -> {
-            r.addNextLocation(Json.decodeValue(String.valueOf(jsonNode.get("loc")),Location.class));
+            Location l = Json.decodeValue(String.valueOf(jsonNode.get("loc")),Location.class);
+            l.setDestination(jsonNode.get("destination").asBoolean());
+            l.setWayPoint(jsonNode.get("wayPoint").asBoolean());
+            r.addNextLocation(l);
         });
         return r;
     }
+
 
     protected JsonNode getNode(String tag, String stream) throws Exception{
         return Json.mapper.readTree(stream).get(tag);
@@ -83,8 +100,10 @@ public class SimulationControl extends ResponderVerticle {
             case "CREATE_ENTRY":
                 try {
                     Responder r = getResponderFromStringJson(String.valueOf(message.body()));
-                    responders.addResponder(r);
+                    if(!responders.getActiveResponders().contains(r))
+                        responders.addResponder(r);
                 }catch(Exception e) {
+                    e.printStackTrace();
                     message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Responder not parsable " + e.getMessage());
                 }
                 break;
