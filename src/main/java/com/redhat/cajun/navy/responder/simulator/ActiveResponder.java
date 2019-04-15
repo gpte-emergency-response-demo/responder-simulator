@@ -8,7 +8,7 @@ public class ActiveResponder {
     private HashSet<Responder> activeResponders = null;
 
     public ActiveResponder(){
-        activeResponders = new HashSet<Responder>(150);
+        activeResponders = new HashSet<Responder>(50);
     }
 
     public boolean addResponder(Responder r){

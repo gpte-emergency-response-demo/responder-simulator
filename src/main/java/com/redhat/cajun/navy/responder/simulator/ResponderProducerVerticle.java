@@ -41,7 +41,7 @@ public class ResponderProducerVerticle extends ResponderMessageVerticle{
                                 ", partition=" + recordMetadata.getPartition() +
                                 ", offset=" + recordMetadata.getOffset());
 
-                        message.reply("Message delivered to topic");
+                        message.reply("Message delivered to topic"+responderMovedTopic);
                     }
 
                 });

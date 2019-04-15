@@ -30,7 +30,9 @@ public abstract class ResponderVerticle extends AbstractVerticle {
 
     public enum Action {
         CREATE_ENTRY ("CREATE_ENTRY"),
-        PUBLISH_UPDATE ("PUBLISH_UPDATE");
+        PUBLISH_UPDATE ("PUBLISH_UPDATE"),
+        RESPONDER_MSG ("RESPONDER_MSG"),
+        ;
 
         private String actionType;
 

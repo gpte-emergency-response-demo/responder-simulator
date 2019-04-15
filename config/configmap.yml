@@ -4,6 +4,8 @@ data:
     kafka.connect=kafka-cluster-kafka-bootstrap.naps-emergency-response.svc:9092
     kafka.sub=topic-mission-event
     kafka.pub=topic-responder-location-update
+    kafka.autocommit=true
+    kafka.group.id=responder-sim
     http.host=localhost
     http.port=8080
 kind: ConfigMap

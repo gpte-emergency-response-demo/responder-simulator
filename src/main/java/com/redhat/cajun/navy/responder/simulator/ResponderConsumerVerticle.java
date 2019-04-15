@@ -15,13 +15,14 @@ public class ResponderConsumerVerticle extends ResponderMessageVerticle {
         consumer.handler(record -> {
             DeliveryOptions options = new DeliveryOptions().addHeader("action", Action.CREATE_ENTRY.getActionType());
 
-            System.out.println(record.value());
-
             vertx.eventBus().send(RES_INQUEUE, record.value(), options, reply -> {
                 if (reply.succeeded()) {
-                    System.out.println("Incoming Message accepted");
+                    //System.out.println("Incoming Message accepted");
+
+
                 } else {
-                    System.out.println("Incoming Message not accepted");
+                    System.err.println("Incoming Message not accepted "+record.topic());
+                    System.err.println(record.value());
                 }
             });
         });
