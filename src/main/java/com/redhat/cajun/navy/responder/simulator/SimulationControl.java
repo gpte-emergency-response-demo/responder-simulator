@@ -39,6 +39,8 @@ public class SimulationControl extends ResponderVerticle {
         // subscribe to Eventbus for incoming messages
         vertx.eventBus().consumer(config().getString(RES_INQUEUE, RES_INQUEUE), this::onMessage);
 
+        defaultTime = config().getInteger("interval", 10000);
+
         long timerID = vertx.setPeriodic(defaultTime, id -> {
             Observable.from(responders.getActiveResponders()).flatMap(responder -> {
                     if(responder.getResponderLocation().isEmpty()) {
@@ -144,7 +146,9 @@ public class SimulationControl extends ResponderVerticle {
                     Responder responder = Json.decodeValue(String.valueOf(message.body()), Responder.class);
                     createMessage((responder));
                     break;
-
+            case "RESPONDERS_CLEAR":
+                    responders = new ActiveResponder();
+                    break;
             default:
                 message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Bad action: " + action);
         }

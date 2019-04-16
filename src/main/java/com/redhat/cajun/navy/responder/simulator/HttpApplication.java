@@ -39,12 +39,24 @@ public class HttpApplication extends AbstractVerticle {
                         });
     }
 
+    private void stopResponders(String name){
+
+        DeliveryOptions options = new DeliveryOptions().addHeader("action", Action.RESPONDERS_CLEAR.getActionType());
+        String RES_INQUEUE = "responder.inqueue";
+        vertx.eventBus().send(RES_INQUEUE, "clear", options, reply -> {
+            System.out.println("Clearing responders, requested by "+name);
+        });
+
+    }
+
+
     private void greeting(RoutingContext rc) {
 
         String name = rc.request().getParam("name");
+        stopResponders(name);
 
         JsonObject response = new JsonObject()
-                .put("content", String.format("-----", name));
+                .put("content", String.format("Clearing.....", name));
 
         rc.response()
                 .putHeader(CONTENT_TYPE, "application/json; charset=utf-8")

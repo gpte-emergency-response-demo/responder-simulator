@@ -8,6 +8,7 @@ data:
     kafka.group.id=responder-sim
     http.host=localhost
     http.port=8080
+    interval=10000
 kind: ConfigMap
 metadata:
   name: responder-simulator
