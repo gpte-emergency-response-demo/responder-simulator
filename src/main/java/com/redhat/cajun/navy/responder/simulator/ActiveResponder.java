@@ -1,14 +1,16 @@
 package com.redhat.cajun.navy.responder.simulator;
 
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Set;
 
 
 public class ActiveResponder {
 
-    private HashSet<Responder> activeResponders = null;
+    private Set<Responder> activeResponders = null;
 
     public ActiveResponder(){
-        activeResponders = new HashSet<Responder>(50);
+        activeResponders = Collections.synchronizedSet(new HashSet<Responder>(150));
     }
 
     public boolean addResponder(Responder r){
@@ -29,7 +31,7 @@ public class ActiveResponder {
         else throw new IllegalArgumentException("ActiveResponders are null");
     }
 
-    public HashSet<Responder> getActiveResponders(){
+    public Set<Responder> getActiveResponders(){
         return activeResponders;
     }
 

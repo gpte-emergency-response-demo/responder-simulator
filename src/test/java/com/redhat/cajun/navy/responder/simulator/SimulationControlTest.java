@@ -1,11 +1,40 @@
 package com.redhat.cajun.navy.responder.simulator;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.vertx.config.ConfigStoreOptions;
+import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
-import org.junit.jupiter.api.Test;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.ext.web.client.WebClient;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 
+@RunWith(VertxUnitRunner.class)
+@org.junit.Ignore
 public class SimulationControlTest {
+
+    private Vertx vertx;
+
+    @Before
+    public void before(TestContext context) {
+        vertx = Vertx.vertx();
+        vertx.exceptionHandler(context.exceptionHandler());
+
+        ConfigStoreOptions props = new ConfigStoreOptions()
+                .setType("file")
+                .setFormat("properties")
+                .setConfig(new JsonObject().put("path", "local-app-config.properties"));
+
+        vertx.deployVerticle(Main.class.getName(),
+                new DeploymentOptions().setConfig(props.toJson()),
+                context.asyncAssertSuccess());
+
+    }
 
 
     @Test

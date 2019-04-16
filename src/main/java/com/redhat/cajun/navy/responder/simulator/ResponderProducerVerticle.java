@@ -3,11 +3,15 @@ package com.redhat.cajun.navy.responder.simulator;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
 import io.vertx.kafka.client.producer.RecordMetadata;
 
 public class ResponderProducerVerticle extends ResponderMessageVerticle{
+
+    Logger logger = LoggerFactory.getLogger(ResponderProducerVerticle.class);
 
     @Override
     public void init(Future<Void> startFuture) throws Exception {
@@ -37,7 +41,7 @@ public class ResponderProducerVerticle extends ResponderMessageVerticle{
                     if (done.succeeded()) {
 
                         RecordMetadata recordMetadata = done.result();
-                        System.out.println("Message " + record.value() + " written on topic=" + recordMetadata.getTopic() +
+                        logger.debug("Message " + record.value() + " written on topic=" + recordMetadata.getTopic() +
                                 ", partition=" + recordMetadata.getPartition() +
                                 ", offset=" + recordMetadata.getOffset());
 

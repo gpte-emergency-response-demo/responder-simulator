@@ -1,5 +1,7 @@
 package com.redhat.cajun.navy.responder.simulator;
 
+import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.Log4JLoggerFactory;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
@@ -8,18 +10,23 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 
 public class Main extends AbstractVerticle {
+
+    Logger logger = LoggerFactory.getLogger(Main.class);
+
     @Override
     public void start(final Future<Void> future) {
-
+        InternalLoggerFactory.setDefaultFactory(Log4JLoggerFactory.INSTANCE);
         ConfigRetriever.create(vertx, selectConfigOptions())
                 .getConfig(ar -> {
                     if (ar.succeeded()) {
                         deployVerticles(ar.result(), future);
                     } else {
-                        System.out.println("Failed to retrieve the configuration.");
+                        logger.debug("Failed to retrieve the configuration.");
                         future.fail(ar.cause());
                     }
                 });
@@ -43,7 +50,6 @@ public class Main extends AbstractVerticle {
                     .setType("file")
                     .setFormat("properties")
                     .setConfig(new JsonObject().put("path", "local-app-config.properties"));
-            System.out.println(config());
             options.addStore(props);
         }
 
@@ -52,6 +58,7 @@ public class Main extends AbstractVerticle {
 
 
     private void deployVerticles(JsonObject config, Future<Void> future){
+
 
         Future<String> rFuture = Future.future();
         Future<String> cFuture = Future.future();
@@ -69,10 +76,10 @@ public class Main extends AbstractVerticle {
 
         CompositeFuture.all(rFuture, cFuture, pFuture).setHandler(ar -> {
             if (ar.succeeded()) {
-                System.out.println("Verticles deployed successfully.");
+                logger.info("Verticles deployed successfully.");
                 future.complete();
             } else {
-                System.out.println("WARNINIG: Verticles NOT deployed successfully.");
+                logger.error("WARNINIG: Verticles NOT deployed successfully.");
                 future.fail(ar.cause());
             }
         });

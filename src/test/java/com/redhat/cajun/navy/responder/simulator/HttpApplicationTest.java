@@ -1,35 +1,70 @@
 package com.redhat.cajun.navy.responder.simulator;
 
+import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
-import io.vertx.junit5.Timeout;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.ext.web.client.WebClient;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
-import java.util.concurrent.TimeUnit;
 
-@ExtendWith(VertxExtension.class)
+import static org.assertj.core.api.Assertions.assertThat;
 
+@RunWith(VertxUnitRunner.class)
+@org.junit.Ignore
 public class HttpApplicationTest {
 
-    @BeforeEach
-    void deploy_verticle(Vertx vertx, VertxTestContext testContext) {
-        vertx.deployVerticle(new HttpApplication(), testContext.succeeding(id -> testContext.completeNow()));
+    public static final int PORT = 8080;
+    private Vertx vertx;
+    private WebClient client;
+
+    @Before
+    public void before(TestContext context) {
+        vertx = Vertx.vertx();
+        vertx.exceptionHandler(context.exceptionHandler());
+        vertx.deployVerticle(Main.class.getName(),
+                new DeploymentOptions().setConfig(new JsonObject().put("http.port", PORT)),
+                context.asyncAssertSuccess());
+        client = WebClient.create(vertx);
+    }
+
+    @After
+    public void after(TestContext context) {
+        vertx.close(context.asyncAssertSuccess());
     }
 
     @Test
-    @DisplayName("Should start a Web Server on port 8080")
-    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
-    void start_http_server(Vertx vertx, VertxTestContext testContext) throws Throwable {
-        vertx.createHttpClient().getNow(8080, "localhost", "/", response -> testContext.verify(() -> {
-            response.handler(body -> {
-                testContext.completeNow();
-            });
-        }));
+    public void callGreetingTest(TestContext context) {
+        // Send a request and get a response
+        Async async = context.async();
+        client.get(PORT, "localhost", "/api/greeting")
+                .send(resp -> {
+                    context.assertTrue(resp.succeeded());
+                    context.assertEquals(resp.result().statusCode(), 200);
+                    String content = resp.result().bodyAsJsonObject().getString("content");
+                    //context.assertEquals(content, String.format(TEMPLATE, "World"));
+                    async.complete();
+                });
     }
 
+    @Test
+    public void callGreetingWithParamTest(TestContext context) {
+        // Send a request and get a response
+        Async async = context.async();
+        client.get(PORT, "localhost", "/api/greeting?name=Charles")
+                .send(resp -> {
+                    context.assertTrue(resp.succeeded());
+                    context.assertEquals(resp.result().statusCode(), 200);
+                    String content = resp.result().bodyAsJsonObject().getString("content");
+                   // context.assertEquals(content, String.format(TEMPLATE, "Charles"));
+                    async.complete();
+                });
+    }
 
 }
+

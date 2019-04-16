@@ -2,10 +2,13 @@ package com.redhat.cajun.navy.responder.simulator;
 
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.kafka.client.consumer.KafkaConsumer;
 
 public class ResponderConsumerVerticle extends ResponderMessageVerticle {
 
+    Logger logger = LoggerFactory.getLogger(ResponderConsumerVerticle.class);
 
     @Override
     public void init(Future<Void> startFuture) throws Exception{
@@ -17,21 +20,19 @@ public class ResponderConsumerVerticle extends ResponderMessageVerticle {
 
             vertx.eventBus().send(RES_INQUEUE, record.value(), options, reply -> {
                 if (reply.succeeded()) {
-                    //System.out.println("Incoming Message accepted");
-
-
+                    logger.debug("Incoming message accepted");
                 } else {
-                    System.err.println("Incoming Message not accepted "+record.topic());
-                    System.err.println(record.value());
+                    logger.debug("Incoming Message not accepted "+record.topic());
+                    logger.debug(record.value());
                 }
             });
         });
 
         consumer.subscribe(responderUpdatedTopic, ar -> {
             if (ar.succeeded()) {
-                System.out.println("subscribed to MissionEvents");
+                logger.debug(("subscribed to MissionEvents"));
             } else {
-                System.out.println("Could not subscribe " + ar.cause().getMessage());
+                logger.fatal("Could not subscribe " + ar.cause().getMessage());
             }
         });
     }
@@ -42,7 +43,7 @@ public class ResponderConsumerVerticle extends ResponderMessageVerticle {
         consumer.unsubscribe(ar -> {
 
             if (ar.succeeded()) {
-                System.out.println("Consumer unsubscribed");
+                logger.debug("Consumer unsubscribed");
             }
         });
     }

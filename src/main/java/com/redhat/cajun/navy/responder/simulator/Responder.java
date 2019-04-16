@@ -152,15 +152,10 @@ public class Responder {
         return Objects.equals(responderId, responder.responderId);
     }
 
-//    public String messageString() {
-//        return "Responder{" +
-//                "responderId='" + responderId + '\'' +
-//                ", missionId='" + missionId + '\'' +
-//                ", responderLocation=" + getCurrentLocation() +
-//                ", isHuman=" + isHuman +
-//                '}';
-//    }
-
+    @Override
+    public int hashCode() {
+        return responderId.hashCode();
+    }
 
     public String messageString(){
         Location l = getCurrentLocation();

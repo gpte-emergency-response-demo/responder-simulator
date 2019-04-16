@@ -6,14 +6,19 @@ import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
-import rx.Observable;
+import java.util.*;
 
 
 public class SimulationControl extends ResponderVerticle {
 
-    private ActiveResponder responders = new ActiveResponder();
-    private int defaultTime = 10000;
+    Logger logger = LoggerFactory.getLogger(SimulationControl.class);
+
+    Set<Responder> responders = null;
+
+    private int defaultTime = 5000;
 
 
     public enum MessageType {
@@ -35,6 +40,7 @@ public class SimulationControl extends ResponderVerticle {
 
     @Override
     public void start(Future<Void> startFuture) throws Exception {
+        responders = new HashSet<Responder>(150);
 
         // subscribe to Eventbus for incoming messages
         vertx.eventBus().consumer(config().getString(RES_INQUEUE, RES_INQUEUE), this::onMessage);
@@ -42,20 +48,34 @@ public class SimulationControl extends ResponderVerticle {
         defaultTime = config().getInteger("interval", 10000);
 
         long timerID = vertx.setPeriodic(defaultTime, id -> {
-            Observable.from(responders.getActiveResponders()).flatMap(responder -> {
+
+            List<Responder> toRemove = new ArrayList<>();
+            vertx.<String>executeBlocking(future -> {
+                responders.forEach(responder -> {
                     if(responder.getResponderLocation().isEmpty()) {
-                        responders.removeResponder(responder);
+                      toRemove.add(responder);
                     }
                     else {
                         if(responder.isContinue()){
                             createMessage((responder));
-                            System.out.println(responder.getResponderLocation().size());
                         }
                     }
 
-                    return Observable.just(responder);
+                });
+                        String result = "";
+                        responders.removeAll(toRemove);
+                        future.complete(result);
 
-            }).subscribe();
+                    },res -> {
+
+                if (res.succeeded()) {
+
+                    res.result();
+
+                } else {
+                    res.cause().printStackTrace();
+                }
+            });
         });
 
     }
@@ -75,17 +95,15 @@ public class SimulationControl extends ResponderVerticle {
         if (r.isEmpty()) {
             r.setContinue(false);
             r.setStatus(Responder.Status.DROPPED);
-            if(responders.hasResponder(r))
-                responders.removeResponder(r);
         }
 
         DeliveryOptions options = new DeliveryOptions().addHeader("action", Action.PUBLISH_UPDATE.getActionType());
         vertx.eventBus().send(RES_OUTQUEUE, r.toString(), options,
                 reply -> {
                     if (reply.succeeded()) {
-                        System.out.println("Responder update message accepted");
+                        logger.debug("EventBus: Responder update message accepted");
                     } else {
-                        System.out.println("Responder update message not accepted");
+                        logger.error("EventBus: Responder update message not accepted");
                     }
                 });
     }
@@ -131,8 +149,8 @@ public class SimulationControl extends ResponderVerticle {
             case "CREATE_ENTRY":
                 try {
                     Responder r = getResponderFromStringJson(String.valueOf(message.body()), MessageType.MissionStartedEvent);
-                        if (!responders.getActiveResponders().contains(r))
-                            responders.addResponder(r);
+                        if (!responders.contains(r))
+                            responders.add(r);
                 }
                 catch(UnWantedResponderEvent re){
                     message.reply(re.getMessage());
@@ -147,7 +165,7 @@ public class SimulationControl extends ResponderVerticle {
                     createMessage((responder));
                     break;
             case "RESPONDERS_CLEAR":
-                    responders = new ActiveResponder();
+                    responders =Collections.synchronizedSet(new HashSet<Responder>(150));
                     break;
             default:
                 message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Bad action: " + action);
