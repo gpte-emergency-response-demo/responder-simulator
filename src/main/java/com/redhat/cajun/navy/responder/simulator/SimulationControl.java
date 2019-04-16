@@ -1,7 +1,6 @@
 package com.redhat.cajun.navy.responder.simulator;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.reactivex.observers.DisposableObserver;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
@@ -14,7 +13,7 @@ import rx.Observable;
 public class SimulationControl extends ResponderVerticle {
 
     private ActiveResponder responders = new ActiveResponder();
-    private int defaultTime = 0010;
+    private int defaultTime = 10000;
 
 
     public enum MessageType {
@@ -47,8 +46,6 @@ public class SimulationControl extends ResponderVerticle {
                     }
                     else {
                         if(responder.isContinue()){
-//                            DeliveryOptions options = new DeliveryOptions().addHeader("action", Action.RESPONDER_MSG.getActionType());
-//                            vertx.eventBus().send(RES_OUTQUEUE, responder.toString(), options);
                             createMessage((responder));
                             System.out.println(responder.getResponderLocation().size());
                         }
@@ -56,9 +53,7 @@ public class SimulationControl extends ResponderVerticle {
 
                     return Observable.just(responder);
 
-            })//.doOnNext(System.out::println)
-                    .subscribe();
-           // System.out.println("Size: "+responders.getActiveResponders().size());
+            }).subscribe();
         });
 
     }
