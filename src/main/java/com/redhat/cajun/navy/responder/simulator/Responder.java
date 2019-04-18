@@ -1,8 +1,6 @@
 package com.redhat.cajun.navy.responder.simulator;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
-import io.vertx.core.json.Json;
 
 import java.util.LinkedList;
 import java.util.Objects;
@@ -17,7 +15,7 @@ public class Responder {
     private String incidentId = null;
 
     @JsonIgnore
-    private Queue<Location> responderLocation = null;
+    public Queue<Location> queue = null;
 
     private boolean isHuman = false;
 
@@ -48,7 +46,7 @@ public class Responder {
 
 
     public Responder() {
-        responderLocation = new LinkedList<>();
+        queue = new LinkedList<>();
     }
 
 
@@ -59,7 +57,6 @@ public class Responder {
     public void setStatus(Status status) {
         this.status = status;
     }
-
 
 
     public boolean isContinue() {
@@ -78,12 +75,12 @@ public class Responder {
         this.incidentId = incidentId;
     }
 
-    public Queue<Location> getResponderLocation() {
-        return responderLocation;
+    public Queue<Location> getQueue() {
+        return queue;
     }
 
-    public void setResponderLocation(Queue<Location> responderLocation) {
-        this.responderLocation = responderLocation;
+    public void setQueue(Queue<Location> queue) {
+        this.queue = queue;
     }
 
     public String getMissionId() {
@@ -102,35 +99,18 @@ public class Responder {
         this.responderId = responderId;
     }
 
-    @JsonIgnore
-    public Location getCurrentLocation() {
-        if(!responderLocation.isEmpty())
-            return responderLocation.element();
-        else return new Location();
-    }
 
 
     public Location nextLocation() {
-        if (!responderLocation.isEmpty()) {
-            return responderLocation.poll();
-        } else throw new IllegalArgumentException("Stack is Empty");
+        return queue.poll();
     }
 
     public void addNextLocation(Location location) {
-        if (responderLocation != null) {
-            responderLocation.add(location);
+        if (queue != null) {
+            queue.add(location);
         }
     }
 
-    @JsonIgnore
-    public boolean isEmpty(){
-        return responderLocation.isEmpty();
-    }
-
-    @JsonIgnore
-    public int size(){
-        return responderLocation.size();
-    }
 
     public void setLocation(Location location) {
         addNextLocation(location);
@@ -162,7 +142,7 @@ public class Responder {
     }
 
     public String messageString(){
-        Location l = getCurrentLocation();
+        Location l = queue.peek();
         return "{\"responderId\":\""+responderId+"\"," +
                 "\"missionId\":\""+missionId+"\"," +
                 "\"incidentId\":\""+incidentId+"\"," +

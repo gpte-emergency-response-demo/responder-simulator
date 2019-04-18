@@ -71,7 +71,7 @@ public class Main extends AbstractVerticle {
         vertx.deployVerticle(new SimulationControl(), options, rFuture.completer());
         vertx.deployVerticle(new ResponderConsumerVerticle(), options, cFuture.completer());
         vertx.deployVerticle(new ResponderProducerVerticle(), options, cFuture.completer());
-        vertx.deployVerticle(new HttpApplication(), options, hFuture.completer());
+        //vertx.deployVerticle(new HttpApplication(), options, hFuture.completer());
 
 
         CompositeFuture.all(rFuture, cFuture, pFuture).setHandler(ar -> {

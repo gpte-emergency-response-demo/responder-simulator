@@ -40,7 +40,7 @@ public class SimulationControl extends ResponderVerticle {
 
     @Override
     public void start(Future<Void> startFuture) throws Exception {
-        responders = new HashSet<Responder>(150);
+        responders = Collections.synchronizedSet(new HashSet<Responder>(150));
 
         // subscribe to Eventbus for incoming messages
         vertx.eventBus().consumer(config().getString(RES_INQUEUE, RES_INQUEUE), this::onMessage);
@@ -50,58 +50,36 @@ public class SimulationControl extends ResponderVerticle {
         long timerID = vertx.setPeriodic(defaultTime, id -> {
 
             List<Responder> toRemove = new ArrayList<>();
-            vertx.<String>executeBlocking(future -> {
-
                 responders.forEach(responder -> {
-                    if(responder.isEmpty()) {
+                    if(responder.queue.isEmpty()) {
                       toRemove.add(responder);
                     }
                     else {
                         if(responder.isContinue()){
                             createMessage((responder));
+                            responder.queue.poll();
                         }
                     }
 
                 });
-                        String result = "";
-                        responders.removeAll(toRemove);
-                        future.complete(result);
+                responders.removeAll(toRemove);
 
-                    },res -> {
-
-                if (res.succeeded()) {
-
-                    res.result();
-
-                } else {
-                    res.cause().printStackTrace();
-                }
-            });
         });
 
     }
 
     protected void createMessage(Responder r){
-        System.out.println(r);
-        if(r.size() > 1) {
-            if (r.getCurrentLocation().isWayPoint()) {
+
+            if (r.queue.peek().isWayPoint())
                 r.setStatus(Responder.Status.PICKEDUP);
-            }
-            else {
+
+            else if (r.queue.peek().isDestination())
+                r.setStatus(Responder.Status.DROPPED);
+
+            else
                 r.setStatus(Responder.Status.MOVING);
-            }
+
             sendMessage(r);
-            r.nextLocation();
-
-        }
-
-        if (r.size()==1) {
-            r.setContinue(false);
-            r.setStatus(Responder.Status.DROPPED);
-            sendMessage(r);
-            r.nextLocation();
-
-        }
 
     }
 
@@ -175,7 +153,7 @@ public class SimulationControl extends ResponderVerticle {
                     createMessage((responder));
                     break;
             case "RESPONDERS_CLEAR":
-                    responders =Collections.synchronizedSet(new HashSet<Responder>(150));
+                    responders = Collections.synchronizedSet(new HashSet<Responder>(150));
                     break;
             default:
                 message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Bad action: " + action);
