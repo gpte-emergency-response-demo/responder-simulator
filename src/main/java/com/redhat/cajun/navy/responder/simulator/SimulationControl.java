@@ -51,8 +51,9 @@ public class SimulationControl extends ResponderVerticle {
 
             List<Responder> toRemove = new ArrayList<>();
             vertx.<String>executeBlocking(future -> {
+
                 responders.forEach(responder -> {
-                    if(responder.getResponderLocation().isEmpty()) {
+                    if(responder.isEmpty()) {
                       toRemove.add(responder);
                     }
                     else {
@@ -81,22 +82,30 @@ public class SimulationControl extends ResponderVerticle {
     }
 
     protected void createMessage(Responder r){
-        //move the responders location
-        if(!r.isEmpty()) {
-            if (r.getCurrentLocation().isWayPoint())
+        System.out.println(r);
+        if(r.size() > 1) {
+            if (r.getCurrentLocation().isWayPoint()) {
                 r.setStatus(Responder.Status.PICKEDUP);
-            else
+            }
+            else {
                 r.setStatus(Responder.Status.MOVING);
+            }
+            sendMessage(r);
             r.nextLocation();
 
-        if (r.isHuman() && r.getCurrentLocation().isWayPoint())
-            r.setContinue(false);
-        }
-        if (r.isEmpty()) {
-            r.setContinue(false);
-            r.setStatus(Responder.Status.DROPPED);
         }
 
+        if (r.size()==1) {
+            r.setContinue(false);
+            r.setStatus(Responder.Status.DROPPED);
+            sendMessage(r);
+            r.nextLocation();
+
+        }
+
+    }
+
+    private void sendMessage(Responder r){
         DeliveryOptions options = new DeliveryOptions().addHeader("action", Action.PUBLISH_UPDATE.getActionType());
         vertx.eventBus().send(RES_OUTQUEUE, r.toString(), options,
                 reply -> {
@@ -106,6 +115,7 @@ public class SimulationControl extends ResponderVerticle {
                         logger.error("EventBus: Responder update message not accepted");
                     }
                 });
+
     }
 
     protected Responder getResponderFromStringJson(String json, MessageType messageType) throws UnWantedResponderEvent, Exception{
@@ -153,7 +163,7 @@ public class SimulationControl extends ResponderVerticle {
                             responders.add(r);
                 }
                 catch(UnWantedResponderEvent re){
-                    message.reply(re.getMessage());
+                    message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Responder not parsable " + re.getMessage());
                 }
                 catch(Exception e) {
                     message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Responder not parsable " + e.getMessage());

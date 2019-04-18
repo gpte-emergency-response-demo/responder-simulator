@@ -127,6 +127,10 @@ public class Responder {
         return responderLocation.isEmpty();
     }
 
+    @JsonIgnore
+    public int size(){
+        return responderLocation.size();
+    }
 
     public void setLocation(Location location) {
         addNextLocation(location);
