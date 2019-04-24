@@ -1,6 +1,7 @@
 package com.redhat.cajun.navy.responder.simulator;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.redhat.cajun.navy.responder.simulator.data.Responder;
 import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
@@ -8,7 +9,6 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.ext.web.client.WebClient;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -50,7 +50,7 @@ public class SimulationControlTest {
 
         steps.elements().forEachRemaining(jsonNode -> {
             System.out.println(jsonNode.get("loc"));
-            r.addNextLocation(Json.decodeValue(String.valueOf(jsonNode.get("loc")),Location.class));
+           // r.addNextLocation(Json.decodeValue(String.valueOf(jsonNode.get("loc")),Location.class));
         });
 
     }

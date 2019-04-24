@@ -1,10 +1,8 @@
 package com.redhat.cajun.navy.responder.simulator;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.redhat.cajun.navy.responder.simulator.data.Location;
+import io.vertx.core.json.Json;
 
-import java.util.LinkedList;
-import java.util.Objects;
-import java.util.Queue;
 
 public class Responder {
 
@@ -14,50 +12,32 @@ public class Responder {
 
     private String incidentId = null;
 
-    @JsonIgnore
-    public Queue<Location> queue = null;
+    private Location location = null;
 
     private boolean isHuman = false;
 
     private boolean isContinue = true;
 
-    private Status status = Status.RECEIVED;
-
-    protected enum Status {
-        RECEIVED("RECEIVED"),
-        PREP("PREP"),
-        READY("READY"),
-        MOVING("MOVING"),
-        STUCK("STUCK"),
-        PICKEDUP("PICKEDUP"),
-        DROPPED("DROPPED");
-
-        private String actionType;
-
-        Status(String actionType) {
-            this.actionType = actionType;
-        }
-
-        public String getActionType() {
-            return actionType;
-        }
-    }
+    private String status;
 
 
-
-    public Responder() {
-        queue = new LinkedList<>();
-    }
-
-
-    public Status getStatus() {
-        return status;
-    }
-
-    public void setStatus(Status status) {
+    public Responder(String responderId, String missionId, String incidentId, Location location, boolean isHuman, boolean isContinue, String status) {
+        this.responderId = responderId;
+        this.missionId = missionId;
+        this.incidentId = incidentId;
+        this.location = location;
+        this.isHuman = isHuman;
+        this.isContinue = isContinue;
         this.status = status;
     }
 
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
 
     public boolean isContinue() {
         return isContinue;
@@ -75,13 +55,6 @@ public class Responder {
         this.incidentId = incidentId;
     }
 
-    public Queue<Location> getQueue() {
-        return queue;
-    }
-
-    public void setQueue(Queue<Location> queue) {
-        this.queue = queue;
-    }
 
     public String getMissionId() {
         return missionId;
@@ -101,23 +74,13 @@ public class Responder {
 
 
 
-    public Location nextLocation() {
-        return queue.poll();
-    }
-
-    public void addNextLocation(Location location) {
-        if (queue != null) {
-            queue.add(location);
-        }
-    }
-
 
     public void setLocation(Location location) {
-        addNextLocation(location);
+        this.location = location;
     }
 
     public Location getLocation() {
-        return nextLocation();
+        return location;
     }
 
     public boolean isHuman() {
@@ -128,35 +91,10 @@ public class Responder {
         isHuman = human;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Responder responder = (Responder) o;
-        return Objects.equals(responderId, responder.responderId);
-    }
-
-    @Override
-    public int hashCode() {
-        return responderId.hashCode();
-    }
-
-    public String messageString(){
-        Location l = queue.peek();
-        return "{\"responderId\":\""+responderId+"\"," +
-                "\"missionId\":\""+missionId+"\"," +
-                "\"incidentId\":\""+incidentId+"\"," +
-                "\"status\":\""+getStatus()+"\"," +
-                "\"continue\":"+isContinue+"," +
-                "\"human\":"+isHuman+"," +
-                "\"location\":{\"lat\":"+l.getLat()+",\"wayPoint\":"+l.isWayPoint()+",\"destination\":"+l.isDestination()+",\"long\":"+l.getLong()+"}}";
-
-
-    }
-
 
     @Override
     public String toString() {
-        return messageString();
+        return Json.encode(this);
     }
 }
+

@@ -29,19 +29,20 @@ public class ResponderProducerVerticle extends ResponderMessageVerticle{
 
 
         String action = message.headers().get("action");
+        String key = message.headers().get("key");
 
         switch (action) {
             case "PUBLISH_UPDATE":
 
                 KafkaProducerRecord<String, String> record =
-                        KafkaProducerRecord.create(responderMovedTopic, String.valueOf(message.body()));
+                        KafkaProducerRecord.create(responderMovedTopic, key, String.valueOf(message.body()));
 
                 producer.write(record, done -> {
 
                     if (done.succeeded()) {
 
                         RecordMetadata recordMetadata = done.result();
-                        logger.debug("Message " + record.value() + " written on topic=" + recordMetadata.getTopic() +
+                        System.out.println("Message " + record.value() + " written on topic=" + recordMetadata.getTopic() +
                                 ", partition=" + recordMetadata.getPartition() +
                                 ", offset=" + recordMetadata.getOffset());
 

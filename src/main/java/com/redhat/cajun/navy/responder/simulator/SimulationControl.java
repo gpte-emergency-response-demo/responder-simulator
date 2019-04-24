@@ -1,6 +1,8 @@
 package com.redhat.cajun.navy.responder.simulator;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.redhat.cajun.navy.responder.simulator.data.Mission;
+import com.redhat.cajun.navy.responder.simulator.data.MissionCommand;
+import com.redhat.cajun.navy.responder.simulator.data.Responder;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
@@ -40,7 +42,7 @@ public class SimulationControl extends ResponderVerticle {
 
     @Override
     public void start(Future<Void> startFuture) throws Exception {
-        responders = Collections.synchronizedSet(new HashSet<Responder>(150));
+        responders = new HashSet<>(150);
 
         // subscribe to Eventbus for incoming messages
         vertx.eventBus().consumer(config().getString(RES_INQUEUE, RES_INQUEUE), this::onMessage);
@@ -49,31 +51,44 @@ public class SimulationControl extends ResponderVerticle {
 
         long timerID = vertx.setPeriodic(defaultTime, id -> {
 
-            List<Responder> toRemove = new ArrayList<>();
+            vertx.<String>executeBlocking(fut->{
+
+
+                List<Responder> toRemove = new ArrayList<>();
                 responders.forEach(responder -> {
-                    if(responder.queue.isEmpty()) {
-                      toRemove.add(responder);
+                    System.out.println("Queue Size: "+ responder.getQueue().size());
+                    if(responder.isEmpty()) {
+                        toRemove.add(responder);
                     }
                     else {
                         if(responder.isContinue()){
                             createMessage((responder));
-                            responder.queue.poll();
+                            //responder.queue.poll();
+                            responder.nextLocation();
                         }
                     }
 
                 });
                 responders.removeAll(toRemove);
 
+            }, res -> {
+                if (res.succeeded()) {
+                    System.out.println("executed");
+
+                } else {
+                    logger.fatal("error while excute blocking");
+                    startFuture.fail(res.cause());
+                }
+            });
         });
 
     }
 
     protected void createMessage(Responder r){
-
-            if (r.queue.peek().isWayPoint())
+            if (r.peek().isWayPoint())
                 r.setStatus(Responder.Status.PICKEDUP);
 
-            else if (r.queue.peek().isDestination())
+            else if (r.peek().isDestination())
                 r.setStatus(Responder.Status.DROPPED);
 
             else
@@ -84,45 +99,27 @@ public class SimulationControl extends ResponderVerticle {
     }
 
     private void sendMessage(Responder r){
-        DeliveryOptions options = new DeliveryOptions().addHeader("action", Action.PUBLISH_UPDATE.getActionType());
-        vertx.eventBus().send(RES_OUTQUEUE, r.toString(), options,
+
+        com.redhat.cajun.navy.responder.simulator.Responder responder =
+                new com.redhat.cajun.navy.responder.simulator.Responder(
+                        r.getResponderId(),
+                        r.getMissionId(),
+                        r.getIncidentId(),
+                        r.getLocation().getLoc(),
+                        r.isHuman(),
+                        r.isContinue(), r.getStatus().getActionType());
+
+        DeliveryOptions options = new DeliveryOptions().addHeader("action", Action.PUBLISH_UPDATE.getActionType()).addHeader("key",r.getIncidentId()+r.getResponderId());
+        vertx.eventBus().send(RES_OUTQUEUE, responder.toString(), options,
                 reply -> {
                     if (reply.succeeded()) {
-                        logger.debug("EventBus: Responder update message accepted");
+                      //  System.out.println("EventBus: Responder update message accepted "+r);
+                      //  System.out.println("Queue Size: "+ r.getQueue().size());
                     } else {
-                        logger.error("EventBus: Responder update message not accepted");
+                        System.err.println("EventBus: Responder update message not accepted "+r);
                     }
                 });
 
-    }
-
-    protected Responder getResponderFromStringJson(String json, MessageType messageType) throws UnWantedResponderEvent, Exception{
-        Responder r = new Responder();
-        JsonNode type = getNode("messageType",json);
-        JsonNode body = getNode("body", json);
-
-        if (type.asText().equalsIgnoreCase(messageType.getMessageType())) {
-            r.setResponderId(body.get("responderId").asText());
-            r.setMissionId((body.get("id").asText()));
-            r.setIncidentId(body.get("incidentId").asText());
-
-            JsonNode route = getNode("route", body.toString());
-            JsonNode steps = getNode("steps", route.toString());
-
-            steps.elements().forEachRemaining(jsonNode -> {
-                Location l = Json.decodeValue(String.valueOf(jsonNode.get("loc")), Location.class);
-                l.setDestination(jsonNode.get("destination").asBoolean());
-                l.setWayPoint(jsonNode.get("wayPoint").asBoolean());
-                r.addNextLocation(l);
-            });
-            return r;
-        }
-        else throw new UnWantedResponderEvent("Unwanted MessageType: "+messageType.getMessageType());
-    }
-
-
-    protected JsonNode getNode(String tag, String stream) throws Exception{
-        return Json.mapper.readTree(stream).get(tag);
     }
 
     public void onMessage(Message<JsonObject> message) {
@@ -131,34 +128,49 @@ public class SimulationControl extends ResponderVerticle {
             message.fail(ErrorCodes.NO_ACTION_SPECIFIED.ordinal(), "No action header specified");
             return;
         }
-
         String action = message.headers().get("action");
         switch (action) {
             case "CREATE_ENTRY":
                 try {
-                    Responder r = getResponderFromStringJson(String.valueOf(message.body()), MessageType.MissionStartedEvent);
+                    Responder r = getResponder(String.valueOf(message.body()), MessageType.MissionStartedEvent);
                         if (!responders.contains(r))
                             responders.add(r);
-                }
+                        message.reply(r.toString());
+               }
                 catch(UnWantedResponderEvent re){
                     message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Responder not parsable " + re.getMessage());
                 }
-                catch(Exception e) {
-                    message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Responder not parsable " + e.getMessage());
-                }
                 break;
 
-            case "RESPONDER_MSG":
-                    Responder responder = Json.decodeValue(String.valueOf(message.body()), Responder.class);
-                    createMessage((responder));
-                    break;
-            case "RESPONDERS_CLEAR":
-                    responders = Collections.synchronizedSet(new HashSet<Responder>(150));
-                    break;
             default:
                 message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Bad action: " + action);
         }
 
     }
+
+
+    protected Responder getResponder(String json, MessageType messageType) throws UnWantedResponderEvent{
+        MissionCommand mc = Json.decodeValue(json, MissionCommand.class);
+
+        Mission m = mc.getBody();
+
+        if(
+                m.getResponderStartLat() == 0
+                        || m.getResponderStartLong() == 0
+                        || m.getIncidentLat() == 0
+                        || m.getIncidentLong() == 0
+                        || m.getDestinationLat() == 0
+                        || m.getDestinationLong() == 0
+        )
+            throw new UnWantedResponderEvent("Unwanted MessageType: "+messageType.getMessageType());
+
+        else if(MessageType.valueOf(mc.getMessageType()).equals(messageType)){
+            return mc.getBody().getResponder();
+        }
+
+        else throw new UnWantedResponderEvent("Unwanted MessageType: "+messageType.getMessageType());
+    }
+
+
 }
 
