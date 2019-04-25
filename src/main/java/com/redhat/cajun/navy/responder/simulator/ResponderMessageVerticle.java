@@ -22,6 +22,5 @@ public abstract class ResponderMessageVerticle extends ResponderVerticle {
         responderMovedTopic = config().getString("kafka.pub");
         responderUpdatedTopic = config().getString("kafka.sub");
         init(startFuture);
-
     }
 }

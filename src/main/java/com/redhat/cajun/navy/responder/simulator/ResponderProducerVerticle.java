@@ -42,7 +42,7 @@ public class ResponderProducerVerticle extends ResponderMessageVerticle{
                     if (done.succeeded()) {
 
                         RecordMetadata recordMetadata = done.result();
-                        System.out.println("Message " + record.value() + " written on topic=" + recordMetadata.getTopic() +
+                        logger.info("Message " + record.value() + " written on topic=" + recordMetadata.getTopic() +
                                 ", partition=" + recordMetadata.getPartition() +
                                 ", offset=" + recordMetadata.getOffset());
 

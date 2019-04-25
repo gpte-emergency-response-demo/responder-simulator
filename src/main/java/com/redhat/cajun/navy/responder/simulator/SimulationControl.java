@@ -56,7 +56,6 @@ public class SimulationControl extends ResponderVerticle {
 
                 List<Responder> toRemove = new ArrayList<>();
                 responders.forEach(responder -> {
-                    System.out.println("Queue Size: "+ responder.getQueue().size());
                     if(responder.isEmpty()) {
                         toRemove.add(responder);
                     }
@@ -73,7 +72,7 @@ public class SimulationControl extends ResponderVerticle {
 
             }, res -> {
                 if (res.succeeded()) {
-                    System.out.println("executed");
+                    logger.debug("executed");
 
                 } else {
                     logger.fatal("error while excute blocking");
@@ -112,11 +111,8 @@ public class SimulationControl extends ResponderVerticle {
         DeliveryOptions options = new DeliveryOptions().addHeader("action", Action.PUBLISH_UPDATE.getActionType()).addHeader("key",r.getIncidentId()+r.getResponderId());
         vertx.eventBus().send(RES_OUTQUEUE, responder.toString(), options,
                 reply -> {
-                    if (reply.succeeded()) {
-                      //  System.out.println("EventBus: Responder update message accepted "+r);
-                      //  System.out.println("Queue Size: "+ r.getQueue().size());
-                    } else {
-                        System.err.println("EventBus: Responder update message not accepted "+r);
+                    if (!reply.succeeded()) {
+                        logger.error("EventBus: Responder update message not accepted "+r);
                     }
                 });
 

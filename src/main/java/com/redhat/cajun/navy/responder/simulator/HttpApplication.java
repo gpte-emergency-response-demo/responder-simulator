@@ -11,6 +11,7 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.StaticHandler;
+import io.vertx.micrometer.PrometheusScrapingHandler;
 import rx.Observable;
 
 import static io.vertx.core.http.HttpHeaders.CONTENT_TYPE;
@@ -25,8 +26,7 @@ public class HttpApplication extends AbstractVerticle {
         // Create a router object.
         Router router = Router.router(vertx);
 
-        router.get("/api/greeting").handler(this::greeting);
-        router.get("/*").handler(StaticHandler.create());
+        router.route("/metrics").handler(PrometheusScrapingHandler.create());
 
         // Create the HTTP server and pass the "accept" method to the request handler.
         vertx
@@ -42,27 +42,4 @@ public class HttpApplication extends AbstractVerticle {
                         });
     }
 
-    private void stopResponders(String name){
-
-        DeliveryOptions options = new DeliveryOptions().addHeader("action", Action.RESPONDERS_CLEAR.getActionType());
-        String RES_INQUEUE = "responder.inqueue";
-        vertx.eventBus().send(RES_INQUEUE, "clear", options, reply -> {
-            logger.debug("Clearing responders, requested by "+name);
-        });
-
-    }
-
-
-    private void greeting(RoutingContext rc) {
-
-        String name = rc.request().getParam("name");
-        stopResponders(name);
-
-        JsonObject response = new JsonObject()
-                .put("content", String.format("Clearing.....", name));
-
-        rc.response()
-                .putHeader(CONTENT_TYPE, "application/json; charset=utf-8")
-                .end(response.encodePrettily());
-    }
 }

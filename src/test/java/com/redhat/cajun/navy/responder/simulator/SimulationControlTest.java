@@ -49,7 +49,6 @@ public class SimulationControlTest {
         JsonNode steps = getNode("steps", route.toString());
 
         steps.elements().forEachRemaining(jsonNode -> {
-            System.out.println(jsonNode.get("loc"));
            // r.addNextLocation(Json.decodeValue(String.valueOf(jsonNode.get("loc")),Location.class));
         });
 
