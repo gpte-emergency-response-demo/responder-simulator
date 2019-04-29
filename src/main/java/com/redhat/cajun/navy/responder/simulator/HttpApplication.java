@@ -36,7 +36,7 @@ public class HttpApplication extends AbstractVerticle {
                         // Retrieve the port from the configuration, default to 8080.
                         config().getInteger("http.port", 8080), ar -> {
                             if (ar.succeeded()) {
-                                logger.debug("Server started on port " + ar.result().actualPort());
+                                logger.info("Server started on port " + ar.result().actualPort());
                             }
                             future.handle(ar.mapEmpty());
                         });
