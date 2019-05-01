@@ -3,6 +3,7 @@ package com.redhat.cajun.navy.responder.simulator;
 import com.redhat.cajun.navy.responder.simulator.data.Mission;
 import com.redhat.cajun.navy.responder.simulator.data.MissionCommand;
 import com.redhat.cajun.navy.responder.simulator.data.Responder;
+import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
@@ -13,8 +14,11 @@ import io.vertx.core.logging.LoggerFactory;
 
 import java.util.*;
 
+import static com.redhat.cajun.navy.responder.simulator.EventConfig.RES_INQUEUE;
+import static com.redhat.cajun.navy.responder.simulator.EventConfig.RES_OUTQUEUE;
 
-public class SimulationControl extends ResponderVerticle {
+
+public class SimulationControl extends AbstractVerticle {
 
     Logger logger = LoggerFactory.getLogger(SimulationControl.class);
 
@@ -62,7 +66,6 @@ public class SimulationControl extends ResponderVerticle {
                     else {
                         if(responder.isContinue()){
                             createMessage((responder));
-                            //responder.queue.poll();
                             responder.nextLocation();
                         }
                     }

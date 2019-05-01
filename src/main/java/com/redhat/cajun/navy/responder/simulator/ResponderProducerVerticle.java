@@ -1,5 +1,6 @@
 package com.redhat.cajun.navy.responder.simulator;
 
+import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
@@ -9,12 +10,27 @@ import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
 import io.vertx.kafka.client.producer.RecordMetadata;
 
-public class ResponderProducerVerticle extends ResponderMessageVerticle{
+import java.util.HashMap;
+import java.util.Map;
+
+import static com.redhat.cajun.navy.responder.simulator.EventConfig.RES_OUTQUEUE;
+
+public class ResponderProducerVerticle extends AbstractVerticle {
 
     Logger logger = LoggerFactory.getLogger(ResponderProducerVerticle.class);
+    private Map<String, String> config = new HashMap<>();
+    KafkaProducer<String,String> producer = null;
+    public String responderMovedTopic = null;
+
 
     @Override
-    public void init(Future<Void> startFuture) throws Exception {
+    public void start(Future<Void> startFuture) throws Exception {
+
+        config.put("bootstrap.servers", config().getString("kafka.connect", "localhost:9092"));
+        config.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        config.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        responderMovedTopic = config().getString("kafka.pub");
+
         producer = KafkaProducer.create(vertx,config);
         vertx.eventBus().consumer(config().getString(RES_OUTQUEUE, RES_OUTQUEUE), this::onMessage);
     }
