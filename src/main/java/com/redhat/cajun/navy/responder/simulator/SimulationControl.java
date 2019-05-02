@@ -3,17 +3,22 @@ package com.redhat.cajun.navy.responder.simulator;
 import com.redhat.cajun.navy.responder.simulator.data.Mission;
 import com.redhat.cajun.navy.responder.simulator.data.MissionCommand;
 import com.redhat.cajun.navy.responder.simulator.data.Responder;
+import io.reactivex.Single;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
+
+
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -190,9 +195,7 @@ public class SimulationControl extends AbstractVerticle {
             else {
                 try {
                     logger.info(mc);
-
                         Responder r = getResponder(mc, MessageType.MissionStartedEvent);
-
                         if (!responders.contains(r))
                             synchronized (this) {
                                 responders.add(r);
@@ -294,11 +297,12 @@ public class SimulationControl extends AbstractVerticle {
 
         else if(MessageType.valueOf(mc.getMessageType()).equals(messageType)){
             Responder r = mc.getBody().getResponder();
-            try {
                 // need to change this to non-blocking
-                boolean person = getResponder(r.getResponderId()).get();
-                r.setHuman(person);
-            }catch (Exception e){logger.error(e.getMessage());}
+                getMyResponderNow(r.getResponderId()).doOnError(throwable -> {
+                    logger.error(throwable.getMessage());
+                }).doOnSuccess(aBoolean -> {
+                    r.setHuman(aBoolean);
+                }).subscribe();
             return r;
         }
 
@@ -306,6 +310,9 @@ public class SimulationControl extends AbstractVerticle {
     }
 
 
+    protected Single<Boolean> getMyResponderNow(String responderId){
+        return Single.fromFuture(getResponder(responderId));
+    }
 
     protected CompletableFuture<Boolean> getResponder(String id){
 
