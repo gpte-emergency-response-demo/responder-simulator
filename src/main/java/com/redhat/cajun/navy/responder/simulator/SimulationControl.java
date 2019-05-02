@@ -60,7 +60,7 @@ public class SimulationControl extends AbstractVerticle {
 
     @Override
     public void start(Future<Void> startFuture) throws Exception {
-        responders = new HashSet<>(150);
+        responders = Collections.synchronizedSet(new HashSet<>(150));
         waitQueue = new HashMap<>(150);
 
 
@@ -143,6 +143,10 @@ public class SimulationControl extends AbstractVerticle {
                 sendMessage(r);
                 r.nextLocation();
             }
+            else{
+                sendMessage(r);
+                r.nextLocation();
+            }
 
     }
 
@@ -188,7 +192,6 @@ public class SimulationControl extends AbstractVerticle {
 
         vertx.<String>executeBlocking(fut->{
 
-
             if (mc.getMessageType().equals(MessageType.MissionPickedUpEvent.getMessageType()) ||
                     mc.getMessageType().equals(MessageType.MissionCompletedEvent.getMessageType())) {
             }
@@ -230,6 +233,7 @@ public class SimulationControl extends AbstractVerticle {
 
     }
 
+
     public void onMessage(Message<JsonObject> message) {
 
         if (!message.headers().contains("action")) {
@@ -245,37 +249,41 @@ public class SimulationControl extends AbstractVerticle {
                 break;
             case "RESPONDER_MSG":
                 Responder r = Json.decodeValue(String.valueOf(message.body()), Responder.class);
-                List<Responder> list = new ArrayList<>();
-                if(responders.contains(r)){
-                    for(Responder temp: responders){
-                        if(temp.getResponderId().equals(r.getResponderId())) {
-                            Responder.Status status = r.getStatus();
-                            r = temp;
-                            r.setHuman(true);
-                            r.setStatus(status);
-                            if(status.equals(Responder.Status.PICKEDUP) || status.equals(Responder.Status.DROPPED)) {
-                                r.setContinue(true);
-                                sendMessage(r);
-                                r.nextLocation();
-                            }
-                            list.add(r);
-                            break;
-                        }
-                    }
-                    // remove previous version of responder in HashSet
-                    responders.remove(r);
-                    // add latest version of responder with setHuman=true
-                    responders.add(r);
-
+                synchronized (this){
+                        setResponderStatus(r);
                 }
                 message.reply("request processed");
                 break;
 
-
-
             default:
                 message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Bad action: " + action);
         }
+    }
+
+    protected void setResponderStatus(Responder r){
+        if(responders.contains(r)) {
+            for (Responder temp : responders) {
+                if (temp.getResponderId().equals(r.getResponderId())) {
+                    Responder.Status status = r.getStatus();
+                    r = temp;
+                    r.setHuman(true);
+                    r.setStatus(status);
+                    if (status.equals(Responder.Status.PICKEDUP) || status.equals(Responder.Status.DROPPED)) {
+                        r.setContinue(true);
+                        sendMessage(r);
+                        r.nextLocation();
+                    }
+                    break;
+                }
+            }
+            synchronized (this) {
+                // remove previous version of responder in HashSet
+                responders.remove(r);
+                // add latest version of responder with setHuman=true
+                responders.add(r);
+            }
+        }
+
     }
 
 
