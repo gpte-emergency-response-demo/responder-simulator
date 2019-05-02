@@ -65,14 +65,17 @@ public class SimulationControl extends AbstractVerticle {
                         // remove responder from simulated list
                         toRemove.add(responder);
 
-                        // Check if the same responder is waiting for another mission in queue
-                        if(waitQueue.containsKey(responder.getResponderId())) {
-                            Queue<Responder> q = waitQueue.get(responder.getResponderId());
-                            if(!q.isEmpty())
-                                toAdd.add(q.poll());
-                            else {
-                                // if queue was empty remove the responder from the map
-                                waitQueue.remove(responder.getResponderId());
+                        // Avoid Concurrent Modification
+                        synchronized(this){
+                            // Check if the same responder is waiting for another mission in queue
+                            if (waitQueue.containsKey(responder.getResponderId())) {
+                                Queue<Responder> q = waitQueue.get(responder.getResponderId());
+                                if (!q.isEmpty())
+                                    toAdd.add(q.poll());
+                                else {
+                                    // if queue was empty remove the responder from the map
+                                    waitQueue.remove(responder.getResponderId());
+                                }
                             }
                         }
                     }
@@ -94,7 +97,8 @@ public class SimulationControl extends AbstractVerticle {
                     logger.debug("executed");
 
                 } else {
-                    logger.fatal("error while excute blocking");
+                    logger.fatal("error while excute blocking ");
+                    res.cause().printStackTrace();
                     startFuture.fail(res.cause());
                 }
             });
@@ -156,6 +160,55 @@ public class SimulationControl extends AbstractVerticle {
 
     }
 
+
+    private void addResponder(MissionCommand mc){
+
+        vertx.<String>executeBlocking(fut->{
+
+
+            if (mc.getMessageType().equals(MessageType.MissionPickedUpEvent.getMessageType()) ||
+                    mc.getMessageType().equals(MessageType.MissionCompletedEvent.getMessageType())) {
+            }
+            else {
+                try {
+                    logger.info(mc);
+
+                        Responder r = getResponder(mc, MessageType.MissionStartedEvent);
+
+                        if (!responders.contains(r))
+                            synchronized (this) {
+                                responders.add(r);
+                            }
+                        else {
+                            synchronized (this) {
+                                if (waitQueue.containsKey(r.getResponderId())) {
+                                    Queue<Responder> q = waitQueue.get(r.getResponderId());
+                                    q.add(r);
+                                    waitQueue.replace(r.getResponderId(), q);
+                                } else {
+                                    Queue<Responder> q = new LinkedList<>();
+                                    q.add(r);
+                                    waitQueue.put(r.getResponderId(), q);
+                                }
+                            }
+                        }
+                } catch (UnWantedResponderEvent re) {
+                        re.printStackTrace();
+                }
+            }
+        }, res -> {
+            if (res.succeeded()) {
+                logger.debug("executed");
+
+            } else {
+                logger.fatal("error while excute blocking ");
+                res.cause().printStackTrace();
+
+            }
+        });
+
+    }
+
     public void onMessage(Message<JsonObject> message) {
 
         if (!message.headers().contains("action")) {
@@ -166,35 +219,8 @@ public class SimulationControl extends AbstractVerticle {
         switch (action) {
             case "CREATE_ENTRY":
                 MissionCommand mc = Json.decodeValue(String.valueOf(message.body()), MissionCommand.class);
-                if (mc.getMessageType().equals(MessageType.MissionPickedUpEvent.getMessageType()) ||
-                        mc.getMessageType().equals(MessageType.MissionCompletedEvent.getMessageType())) {
-                    message.reply("Only creation events accepted!");
-                }
-                else {
-                    try {
-                        logger.info(message.body());
-                        Responder r = getResponder(mc, MessageType.MissionStartedEvent);
-                        if (!responders.contains(r))
-                            responders.add(r);
-                        else {
-                            if(waitQueue.containsKey(r.getResponderId())) {
-                                Queue<Responder> q = waitQueue.get(r.getResponderId());
-                                q.add(r);
-                                waitQueue.replace(r.getResponderId(), q);
-                            }
-                            else {
-                                Queue<Responder> q = new LinkedList<>();
-                                q.add(r);
-                                waitQueue.put(r.getResponderId(), q);
-                            }
-                        }
-
-                        message.reply(r.toString());
-                    } catch (UnWantedResponderEvent re) {
-                        message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Responder not parsable " + re.getMessage());
-                    }
-                }
-
+                addResponder(mc);
+                message.reply("received");
                 break;
             case "RESPONDER_MSG":
                 Responder r = Json.decodeValue(String.valueOf(message.body()), Responder.class);
