@@ -9,6 +9,9 @@ data:
     http.host=localhost
     http.port=8080
     interval=10000
+    responder.service=responder-service.naps-emergency-response.svc
+    responder.endpoint=/responder/
+    responder.port=8080
 kind: ConfigMap
 metadata:
   name: responder-simulator

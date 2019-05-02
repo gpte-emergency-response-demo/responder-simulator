@@ -3,16 +3,25 @@ package com.redhat.cajun.navy.responder.simulator;
 import com.redhat.cajun.navy.responder.simulator.data.Mission;
 import com.redhat.cajun.navy.responder.simulator.data.MissionCommand;
 import com.redhat.cajun.navy.responder.simulator.data.Responder;
+import io.reactivex.Flowable;
+import io.reactivex.Single;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.reactivex.core.http.HttpClient;
+import io.vertx.reactivex.core.http.HttpClientRequest;
+import io.vertx.reactivex.core.http.HttpClientResponse;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 import static com.redhat.cajun.navy.responder.simulator.EventConfig.RES_INQUEUE;
 import static com.redhat.cajun.navy.responder.simulator.EventConfig.RES_OUTQUEUE;
@@ -24,8 +33,13 @@ public class SimulationControl extends AbstractVerticle {
 
     Set<Responder> responders = null;
     HashMap<String, Queue<Responder>> waitQueue = null;
+    String uri = "/responder/";
+    String host = "responder-service.naps-emergency-response.svc";
+    int port = 8080;
 
     private int defaultTime = 5000;
+
+    WebClient client = null;
 
     public enum MessageType {
         MissionStartedEvent("MissionStartedEvent"),
@@ -48,6 +62,15 @@ public class SimulationControl extends AbstractVerticle {
     public void start(Future<Void> startFuture) throws Exception {
         responders = new HashSet<>(150);
         waitQueue = new HashMap<>(150);
+
+
+        client = WebClient.create(vertx);
+        host = config().getString("responder.service");
+        uri = config().getString("responder.endpoint");
+        port = config().getInteger("responder.port");
+        System.out.println("IncidentService located at: "+host + uri);
+
+
 
         // subscribe to Eventbus for incoming messages
         vertx.eventBus().consumer(config().getString(RES_INQUEUE, RES_INQUEUE), this::onMessage);
@@ -275,10 +298,43 @@ public class SimulationControl extends AbstractVerticle {
 
 
         else if(MessageType.valueOf(mc.getMessageType()).equals(messageType)){
-            return mc.getBody().getResponder();
+            Responder r = mc.getBody().getResponder();
+            try {
+                // need to change this to non-blocking
+                boolean person = getResponder(r.getResponderId()).get();
+                r.setHuman(person);
+            }catch (Exception e){logger.error(e.getMessage());}
+
+
+            logger.info(r.isHuman());
+            return r;
         }
 
         else throw new UnWantedResponderEvent("Unwanted MessageType: "+messageType.getMessageType());
+    }
+
+
+
+    protected CompletableFuture<Boolean> getResponder(String id){
+
+        CompletableFuture<Boolean> request = new CompletableFuture<>();
+        client.get(port, host, uri+id)
+                .send(ar -> {
+                    if (ar.succeeded()) {
+                        // Obtain response
+                        HttpResponse<Buffer> response = ar.result();
+                        JsonObject obj = response.bodyAsJsonObject();
+                        logger.debug("Received response with status code" + response.statusCode());
+                        logger.info("ResponderService: " + obj);
+                        request.complete(obj.getBoolean("person"));
+                    } else {
+                        logger.error("Something went wrong " + ar.cause().getMessage());
+                    }
+                });
+
+            return request;
+
+
     }
 
 
