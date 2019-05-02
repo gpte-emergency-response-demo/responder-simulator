@@ -23,9 +23,9 @@ public class SimulationControl extends AbstractVerticle {
     Logger logger = LoggerFactory.getLogger(SimulationControl.class);
 
     Set<Responder> responders = null;
+    HashMap<String, Queue<Responder>> waitQueue = null;
 
     private int defaultTime = 5000;
-
 
     public enum MessageType {
         MissionStartedEvent("MissionStartedEvent"),
@@ -47,6 +47,7 @@ public class SimulationControl extends AbstractVerticle {
     @Override
     public void start(Future<Void> startFuture) throws Exception {
         responders = new HashSet<>(150);
+        waitQueue = new HashMap<>(150);
 
         // subscribe to Eventbus for incoming messages
         vertx.eventBus().consumer(config().getString(RES_INQUEUE, RES_INQUEUE), this::onMessage);
@@ -55,23 +56,38 @@ public class SimulationControl extends AbstractVerticle {
 
         long timerID = vertx.setPeriodic(defaultTime, id -> {
 
+            List<Responder> toRemove = new ArrayList<>();
+            List<Responder> toAdd = new ArrayList<>();
+
             vertx.<String>executeBlocking(fut->{
-
-
-                List<Responder> toRemove = new ArrayList<>();
                 responders.forEach(responder -> {
                     if(responder.isEmpty()) {
+                        // remove responder from simulated list
                         toRemove.add(responder);
+
+                        // Check if the same responder is waiting for another mission in queue
+                        if(waitQueue.containsKey(responder.getResponderId())) {
+                            Queue<Responder> q = waitQueue.get(responder.getResponderId());
+                            if(!q.isEmpty())
+                                toAdd.add(q.poll());
+                            else {
+                                // if queue was empty remove the responder from the map
+                                waitQueue.remove(responder.getResponderId());
+                            }
+                        }
                     }
                     else {
                         if(responder.isContinue()){
                             createMessage((responder));
-                            responder.nextLocation();
                         }
                     }
 
                 });
                 responders.removeAll(toRemove);
+                responders.addAll(toAdd);
+                logger.info(Json.encode("Added "+toAdd));
+                logger.info(Json.encode("Removed: "+toRemove));
+                logger.info(Json.encode("Wait Queue: "+waitQueue));
 
             }, res -> {
                 if (res.succeeded()) {
@@ -87,18 +103,37 @@ public class SimulationControl extends AbstractVerticle {
     }
 
     protected void createMessage(Responder r){
-            if (r.peek().isWayPoint())
-                r.setStatus(Responder.Status.PICKEDUP);
+            if(humanMessageCheck(r)) {
+                if (r.peek().isWayPoint())
+                    r.setStatus(Responder.Status.PICKEDUP);
 
-            else if (r.peek().isDestination())
-                r.setStatus(Responder.Status.DROPPED);
+                else if (r.peek().isDestination())
+                    r.setStatus(Responder.Status.DROPPED);
 
-            else
-                r.setStatus(Responder.Status.MOVING);
+                else
+                    r.setStatus(Responder.Status.MOVING);
 
-            sendMessage(r);
+                sendMessage(r);
+                r.nextLocation();
+            }
 
     }
+
+    // if human return false and skip this guy
+    public boolean humanMessageCheck(Responder r){
+        if(r.isHuman()){
+            if (r.peek().isWayPoint() || r.peek().isDestination()) {
+                // eating one step
+                r.setContinue(false);
+                return false;
+            }
+        }
+
+
+        return true;
+
+    }
+
 
     private void sendMessage(Responder r){
 
@@ -130,29 +165,76 @@ public class SimulationControl extends AbstractVerticle {
         String action = message.headers().get("action");
         switch (action) {
             case "CREATE_ENTRY":
-                try {
-                    Responder r = getResponder(String.valueOf(message.body()), MessageType.MissionStartedEvent);
+                MissionCommand mc = Json.decodeValue(String.valueOf(message.body()), MissionCommand.class);
+                if (mc.getMessageType().equals(MessageType.MissionPickedUpEvent.getMessageType()) ||
+                        mc.getMessageType().equals(MessageType.MissionCompletedEvent.getMessageType())) {
+                    message.reply("Only creation events accepted!");
+                }
+                else {
+                    try {
+                        logger.info(message.body());
+                        Responder r = getResponder(mc, MessageType.MissionStartedEvent);
                         if (!responders.contains(r))
                             responders.add(r);
+                        else {
+                            if(waitQueue.containsKey(r.getResponderId())) {
+                                Queue<Responder> q = waitQueue.get(r.getResponderId());
+                                q.add(r);
+                                waitQueue.replace(r.getResponderId(), q);
+                            }
+                            else {
+                                Queue<Responder> q = new LinkedList<>();
+                                q.add(r);
+                                waitQueue.put(r.getResponderId(), q);
+                            }
+                        }
+
                         message.reply(r.toString());
-               }
-                catch(UnWantedResponderEvent re){
-                    message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Responder not parsable " + re.getMessage());
+                    } catch (UnWantedResponderEvent re) {
+                        message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Responder not parsable " + re.getMessage());
+                    }
                 }
+
                 break;
+            case "RESPONDER_MSG":
+                Responder r = Json.decodeValue(String.valueOf(message.body()), Responder.class);
+                List<Responder> list = new ArrayList<>();
+                if(responders.contains(r)){
+                    for(Responder temp: responders){
+                        if(temp.getResponderId().equals(r.getResponderId())) {
+                            Responder.Status status = r.getStatus();
+                            r = temp;
+                            r.setHuman(true);
+                            r.setStatus(status);
+                            if(status.equals(Responder.Status.PICKEDUP) || status.equals(Responder.Status.DROPPED)) {
+                                r.setContinue(true);
+                                sendMessage(r);
+                                r.nextLocation();
+                            }
+                            list.add(r);
+                            break;
+                        }
+                    }
+                    // remove previous version of responder in HashSet
+                    responders.remove(r);
+                    // add latest version of responder with setHuman=true
+                    responders.add(r);
+
+                }
+                message.reply("request processed");
+                break;
+
+
 
             default:
                 message.fail(ErrorCodes.BAD_ACTION.ordinal(), "Bad action: " + action);
         }
-
     }
 
 
-    protected Responder getResponder(String json, MessageType messageType) throws UnWantedResponderEvent{
-        MissionCommand mc = Json.decodeValue(json, MissionCommand.class);
+    protected Responder getResponder(MissionCommand mc, MessageType messageType) throws UnWantedResponderEvent{
 
         Mission m = mc.getBody();
-
         if(
                 m.getResponderStartLat() == 0
                         || m.getResponderStartLong() == 0
@@ -160,8 +242,11 @@ public class SimulationControl extends AbstractVerticle {
                         || m.getIncidentLong() == 0
                         || m.getDestinationLat() == 0
                         || m.getDestinationLong() == 0
-        )
+        ){
+            logger.fatal("Recieved 0 for coordinates, NOT ACCEPTED!");
             throw new UnWantedResponderEvent("Unwanted MessageType: "+messageType.getMessageType());
+        }
+
 
         else if(MessageType.valueOf(mc.getMessageType()).equals(messageType)){
             return mc.getBody().getResponder();

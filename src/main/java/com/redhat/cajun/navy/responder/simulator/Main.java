@@ -1,7 +1,5 @@
 package com.redhat.cajun.navy.responder.simulator;
 
-import io.netty.util.internal.logging.InternalLoggerFactory;
-import io.netty.util.internal.logging.Log4JLoggerFactory;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
@@ -51,10 +49,12 @@ public class Main extends AbstractVerticle {
         DeploymentOptions options = new DeploymentOptions();
         options.setConfig(config);
 
+        vertx.deployVerticle(new RestVerticle(), options, hFuture.completer());
         vertx.deployVerticle(new SimulationControl(), options, rFuture.completer());
         vertx.deployVerticle(new ResponderConsumerVerticle(), options, cFuture.completer());
         vertx.deployVerticle(new ResponderProducerVerticle(), options, cFuture.completer());
-        vertx.deployVerticle(new HttpApplication(), options, hFuture.completer());
+
+
 
         CompositeFuture.all(rFuture, cFuture, pFuture).setHandler(ar -> {
             if (ar.succeeded()) {

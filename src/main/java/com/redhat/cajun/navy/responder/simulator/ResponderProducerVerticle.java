@@ -58,10 +58,10 @@ public class ResponderProducerVerticle extends AbstractVerticle {
                     if (done.succeeded()) {
 
                         RecordMetadata recordMetadata = done.result();
-                        logger.info("Message " + record.value() + " written on topic=" + recordMetadata.getTopic() +
+                        /*logger.info("Message " + record.value() + " written on topic=" + recordMetadata.getTopic() +
                                 ", partition=" + recordMetadata.getPartition() +
                                 ", offset=" + recordMetadata.getOffset());
-
+*/
                         message.reply("Message delivered to topic"+responderMovedTopic);
                     }
 

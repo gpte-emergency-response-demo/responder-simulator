@@ -28,7 +28,7 @@ public class ResponderConsumerVerticle extends AbstractVerticle {
         config.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         config.put("group.id", config().getString("kafka.group.id"));
         config.put("auto.offset.reset", "earliest");
-        config.put("enable.auto.commit", config().getBoolean("kafka.autocommit", true).toString());
+        config.put("enable.auto.commit",config().getBoolean("kafka.autocommit", true).toString());
 
         responderUpdatedTopic = config().getString("kafka.sub");
 
@@ -38,12 +38,13 @@ public class ResponderConsumerVerticle extends AbstractVerticle {
             DeliveryOptions options = new DeliveryOptions().addHeader("action", Action.CREATE_ENTRY.getActionType());
 
             vertx.eventBus().send(RES_INQUEUE, record.value(), options, reply -> {
-                logger.info(record.value());
                 if (reply.succeeded()) {
                     logger.debug("Incoming message accepted");
+                    logger.debug("Message committed "+record.value());
                 } else {
-                    logger.debug("Incoming Message not accepted "+record.topic());
-                    logger.debug(record.value());
+                    logger.error("Incoming Message not accepted "+record.value());
+
+
                 }
             });
         });
