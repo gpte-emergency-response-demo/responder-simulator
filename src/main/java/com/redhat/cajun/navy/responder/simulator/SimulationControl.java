@@ -3,8 +3,6 @@ package com.redhat.cajun.navy.responder.simulator;
 import com.redhat.cajun.navy.responder.simulator.data.Mission;
 import com.redhat.cajun.navy.responder.simulator.data.MissionCommand;
 import com.redhat.cajun.navy.responder.simulator.data.Responder;
-import io.reactivex.Flowable;
-import io.reactivex.Single;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -16,9 +14,6 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
-import io.vertx.reactivex.core.http.HttpClient;
-import io.vertx.reactivex.core.http.HttpClientRequest;
-import io.vertx.reactivex.core.http.HttpClientResponse;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -304,9 +299,6 @@ public class SimulationControl extends AbstractVerticle {
                 boolean person = getResponder(r.getResponderId()).get();
                 r.setHuman(person);
             }catch (Exception e){logger.error(e.getMessage());}
-
-
-            logger.info(r.isHuman());
             return r;
         }
 
