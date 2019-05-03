@@ -153,9 +153,14 @@ public class SimulationControl extends AbstractVerticle {
     // if human return false and skip this guy
     public boolean humanMessageCheck(Responder r){
         if(r.isHuman()){
-            if (r.peek().isWayPoint() || r.peek().isDestination()) {
+            if (r.peek().isWayPoint()) {
                 // eating one step
                 r.setContinue(false);
+                return false;
+            }
+            else if(r.peek().isDestination()){
+                r.setContinue(false);
+                r.setStatus(Responder.Status.DROPPED);
                 return false;
             }
         }
