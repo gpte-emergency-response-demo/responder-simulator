@@ -9,8 +9,6 @@ import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -311,7 +309,7 @@ public class SimulationControl extends AbstractVerticle {
         else if(MessageType.valueOf(mc.getMessageType()).equals(messageType)){
             Responder r = mc.getBody().getResponder();
                 // need to change this to non-blocking
-                getMyResponderNow(r.getResponderId()).doOnError(throwable -> {
+                getPersonResponder(r.getResponderId()).doOnError(throwable -> {
                     logger.error(throwable.getMessage());
                 }).doOnSuccess(aBoolean -> {
                     r.setHuman(aBoolean);
@@ -323,7 +321,7 @@ public class SimulationControl extends AbstractVerticle {
     }
 
 
-    protected Single<Boolean> getMyResponderNow(String responderId){
+    protected Single<Boolean> getPersonResponder(String responderId){
         return Single.fromFuture(getResponder(responderId));
     }
 
@@ -340,7 +338,8 @@ public class SimulationControl extends AbstractVerticle {
                         logger.info("ResponderService: " + obj);
                         request.complete(obj.getBoolean("person"));
                     } else {
-                        logger.error("Something went wrong " + ar.cause().getMessage());
+                        logger.error("Responder not found: defaulting to false" + ar.cause().getMessage());
+                        request.complete(false);
                     }
                 });
 
