@@ -109,9 +109,9 @@ public class SimulationControl extends AbstractVerticle {
                 });
                 responders.removeAll(toRemove);
                 responders.addAll(toAdd);
-                logger.info(Json.encode("Added "+toAdd));
-                logger.info(Json.encode("Removed: "+toRemove));
-                logger.info(Json.encode("Wait Queue: "+waitQueue));
+               // logger.info(Json.encode("Added "+toAdd));
+               // logger.info(Json.encode("Removed: "+toRemove));
+               // logger.info(Json.encode("Wait Queue: "+waitQueue));
 
             }, res -> {
                 if (res.succeeded()) {
@@ -176,7 +176,8 @@ public class SimulationControl extends AbstractVerticle {
                         r.getResponderId(),
                         r.getMissionId(),
                         r.getIncidentId(),
-                        r.getLocation().getLoc(),
+                        r.getLocation().getLat(),
+                        r.getLocation().getLon(),
                         r.isHuman(),
                         r.isContinue(), r.getStatus().getActionType());
 
@@ -343,6 +344,7 @@ public class SimulationControl extends AbstractVerticle {
                     }
                 });
 
+            request.complete(false);
             return request;
 
 

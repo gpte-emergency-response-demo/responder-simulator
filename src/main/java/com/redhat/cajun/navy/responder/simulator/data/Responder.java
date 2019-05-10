@@ -1,12 +1,13 @@
 package com.redhat.cajun.navy.responder.simulator.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.vertx.core.json.Json;
 
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Queue;
-
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Responder {
 
     private String responderId = null;

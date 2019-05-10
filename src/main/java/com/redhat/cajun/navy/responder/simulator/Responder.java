@@ -1,6 +1,5 @@
 package com.redhat.cajun.navy.responder.simulator;
 
-import com.redhat.cajun.navy.responder.simulator.data.Location;
 import io.vertx.core.json.Json;
 
 
@@ -12,23 +11,42 @@ public class Responder {
 
     private String incidentId = null;
 
-    private Location location = null;
-
     private boolean isHuman = false;
 
     private boolean isContinue = true;
 
     private String status;
 
+    private double lat;
+    private double lon;
 
-    public Responder(String responderId, String missionId, String incidentId, Location location, boolean isHuman, boolean isContinue, String status) {
+
+    public Responder(String responderId, String missionId, String incidentId, double lat, double lon, boolean isHuman, boolean isContinue, String status) {
         this.responderId = responderId;
         this.missionId = missionId;
         this.incidentId = incidentId;
-        this.location = location;
+        this.lat = lat;
+        this.lon = lon;
+
         this.isHuman = isHuman;
         this.isContinue = isContinue;
         this.status = status;
+    }
+
+    public double getLat() {
+        return lat;
+    }
+
+    public void setLat(double input) {
+        this.lat = input;
+    }
+
+    public double getLon() {
+        return lon;
+    }
+
+    public void setLon(double input) {
+        this.lon = input;
     }
 
     public String getStatus() {
@@ -72,16 +90,6 @@ public class Responder {
         this.responderId = responderId;
     }
 
-
-
-
-    public void setLocation(Location location) {
-        this.location = location;
-    }
-
-    public Location getLocation() {
-        return location;
-    }
 
     public boolean isHuman() {
         return isHuman;

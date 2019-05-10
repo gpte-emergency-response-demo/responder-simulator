@@ -52,7 +52,7 @@ public class ResponderProducerVerticle extends AbstractVerticle {
 
                 KafkaProducerRecord<String, String> record =
                         KafkaProducerRecord.create(responderMovedTopic, key, String.valueOf(message.body()));
-
+                System.out.println(message.body());
                 producer.write(record, done -> {
 
                     if (done.succeeded()) {
