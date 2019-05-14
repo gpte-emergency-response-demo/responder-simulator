@@ -1,5 +1,6 @@
 package com.redhat.cajun.navy.responder.simulator;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.vertx.core.json.Json;
 
 
@@ -16,8 +17,12 @@ public class Responder {
     private boolean isContinue = true;
 
     private String status;
-
+    @JsonSerialize(using = DoubleContextualSerializer.class)
+    @Precision(precision = 4)
     private double lat;
+
+    @JsonSerialize(using = DoubleContextualSerializer.class)
+    @Precision(precision = 4)
     private double lon;
 
 
